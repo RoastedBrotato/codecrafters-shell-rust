@@ -1,31 +1,19 @@
 #[allow(unused_imports)]
 use std::io::{self, Write};
-
 fn main() {
     let stdin = io::stdin();
-
+    let mut input = String::new();
     loop {
-        // Print the prompt
+        input.clear();
         print!("$ ");
-        io::stdout().flush().expect("Failed to flush stdout"); // Ensure the prompt is flushed immediately
-
-        // Read user input
-        let mut input = String::new();
-        let bytes_read = stdin.read_line(&mut input).expect("Failed to read line");
-
-        // Exit the loop if EOF or no input
-        if bytes_read == 0 {
-            break;
+        io::stdout().flush().unwrap();
+        // Wait for user input
+        stdin.read_line(&mut input).unwrap();
+        match input.trim() {
+            "exit 0" => break,
+            &_ => {
+                print!("{}: not found\n", input.trim());
+            }
         }
-
-        let trimmed_input = input.trim();
-
-        // If input is empty, continue to the next iteration
-        if trimmed_input.is_empty() {
-            continue;
-        }
-
-        // Print the "command not found" message
-        println!("{}: command not found", trimmed_input);
     }
 }
