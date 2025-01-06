@@ -1,19 +1,19 @@
 #[allow(unused_imports)]
 use std::io::{self, Write};
 fn main() {
-    let stdin = io::stdin();
-    let mut input = String::new();
     loop {
-        input.clear();
         print!("$ ");
         io::stdout().flush().unwrap();
-        // Wait for user input
+        let stdin = io::stdin();
+        let mut input = String::new();
         stdin.read_line(&mut input).unwrap();
-        match input.trim() {
-            "exit 0" => break,
-            &_ => {
-                print!("{}: not found\n", input.trim());
-            }
+        let trimmed_input = input.trim();
+        let command = trimmed_input.split_whitespace().next().unwrap();
+        // let args = trimmed_input.split_whitespace().collect::<Vec<&str>>();
+        match command {
+            "echo" => println!("{}", trimmed_input.replacen("echo ", "", 1)),
+            "exit" => break,
+            _ => println!("{}: command not found", trimmed_input),
         }
     }
 }
