@@ -1,52 +1,33 @@
-#[allow(unused_imports)]
+mod builtins;
+use crate::builtins::{cmd_type, echo, exit, BUILD_INS};
+use std::env;
 use std::io::{self, Write};
-
-fn main() {
-    let stdin = io::stdin();
-    let path_env = std::env::var("PATH").unwrap();
-
-    loop {
-        print!("$ ");
-        io::stdout().flush().unwrap();
-
-        let mut input = String::new();
-        stdin.read_line(&mut input).unwrap();
-
-        let argv = input.split_whitespace().collect::<Vec<&str>>();
-        if argv.is_empty() {
+use std::path::PathBuf;
+use std::process::Command;
+fn find_exe(name: &str) -> Option<PathBuf> {
+    if let Ok(paths) = env::var("PATH") {
+Expand 20 lines
+        let cmds: Vec<_> = input.split_whitespace().collect();
+        if cmds.is_empty() {
+            return;
             continue;
         }
-
-        let builtins = ["exit", "echo", "type"];
-        match argv[0] {
-            "exit" => break,
-            "echo" => {
-                println!("{}", argv[1..].join(" "));
-            }
-            "type" => {
-                if argv.len() != 2 {
-                    println!("type: expected 1 argument, got {}", argv.len() - 1);
-                    continue;
-                }
-
-                let cmd = argv[1];
-                if builtins.contains(&cmd) {
-                    println!("{} is a shell builtin", cmd);
-                } else {
-                    // Search for the command in PATH directories
-                    let mut split = path_env.split(':'); // Declared as mutable
-                    if let Some(path) = split
-                        .find(|&dir| std::fs::metadata(format!("{}/{}", dir, cmd)).is_ok())
-                    {
-                        println!("{cmd} is {path}/{cmd}");
-                    } else {
-                        println!("{cmd}: not found");
-                    }
-                }
-            }
-            _ => {
-                println!("{}: command not found", input.trim());
-            }
+        let cmd = cmds[0];
+        let args = &cmds[1..];
+        if BUILD_INS.contains(&cmd) {
+            match cmd {
+                "exit" => exit(args),
+                "echo" => echo(args),
+                "type" => cmd_type(args),
+                _ => unreachable!(),
+            };
+        } else if let Some(path) = find_exe(cmd) {
+            Command::new(path)
+                .args(args)
+                .status()
+                .expect("failed to execute process");
+        } else {
+            println!("{}: command not found", cmd)
         }
     }
 }
