@@ -1,10 +1,8 @@
-#[allow(unused_imports)]
 use std::io::{self, Write};
-fn main() {
+fn main() -> io::Result<()> {
     loop {
         print!("$ ");
-        io::stdout().flush().unwrap();
-
+        io::stdout().flush()?;
         let stdin = io::stdin();
         let mut input = String::new();
         stdin.read_line(&mut input)?;
