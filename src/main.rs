@@ -34,7 +34,7 @@ fn main() {
                     println!("{} is a shell builtin", cmd);
                 } else {
                     // Search for the command in PATH directories
-                    let split = path_env.split(':');
+                    let mut split = path_env.split(':'); // Declared as mutable
                     if let Some(path) = split
                         .find(|&dir| std::fs::metadata(format!("{}/{}", dir, cmd)).is_ok())
                     {
