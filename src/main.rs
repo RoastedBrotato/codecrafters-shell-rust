@@ -1,20 +1,46 @@
+#[allow(unused_imports)]
 use std::io::{self, Write};
-fn main() -> io::Result<()> {
+fn main() {
+    let stdin = io::stdin();
+    let path_env = std::env::var("PATH").unwrap();
     loop {
         print!("$ ");
-        io::stdout().flush()?;
-        let stdin = io::stdin();
+        io::stdout().flush().unwrap();
         let mut input = String::new();
-        stdin.read_line(&mut input)?;
-        let tokens: Vec<&str> = input.trim().split(' ').filter(|s| !s.is_empty()).collect();
-        match tokens[..] {
-            ["exit", code] => std::process::exit(code.parse::<u8>().unwrap().into()),
-            ["echo", ..] => println!("{}", tokens[1..].join(" ")),
-            ["type", cmd] => match cmd {
-                "exit" | "echo" | "type" => println!("{cmd} is a shell builtin"),
-                _ => println!("{cmd}: not found"),
-            },
-            _ => println!("{}: command not found", input.trim()),
+        stdin.read_line(&mut input).unwrap();
+        let argv = input.split_whitespace().collect::<Vec<&str>>();
+        if argv.is_empty() {
+            continue;
+        }
+        let builtins = ["exit", "echo", "type"];
+        match argv[0] {
+            "exit" => break,
+            "echo" => {
+                println!("{}", argv[1..].join(" "));
+            }
+            "type" => {
+                if argv.len() != 2 {
+                    println!("type: expected 1 argument, got {}", argv.len() - 1);
+                    continue;
+                }
+                let cmd = argv[1];
+                if builtins.contains(&cmd) {
+                    println!("{} is a shell builtin", cmd);
+                } else {
+                    println!("{} not found", cmd);
+                    let split = &mut path_env.split(':');
+                    if let Some(path) =
+                        split.find(|path| std::fs::metadata(format!("{}/{}", path, cmd)).is_ok())
+                    {
+                        println!("{cmd} is {path}/{cmd}");
+                    } else {
+                        println!("{cmd} not found");
+                    }
+                }
+            }
+            _ => {
+                println!("{}: command not found", input.trim())
+            }
         }
     }
 }
