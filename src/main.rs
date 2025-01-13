@@ -22,7 +22,7 @@ fn main() {
             _ => {
                 // Attempt to locate and execute the command
                 if let Some(full_path) = locate_program(&path_env, argv[0]) {
-                    execute_program(&full_path, &argv);
+                    execute_program(&full_path, argv[0], &argv[1..]);
                 } else {
                     println!("{}: command not found", argv[0]);
                 }
@@ -43,15 +43,15 @@ fn locate_program(path_env: &str, program: &str) -> Option<String> {
 }
 
 /// Execute the program with its arguments
-fn execute_program(program: &str, args: &[&str]) {
-    match Command::new(program).args(&args[1..]).status() {
-        Ok(status) => {
-            if !status.success() {
-                eprintln!("{} exited with code {}", program, status.code().unwrap_or(-1));
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed to execute {}: {}", program, e);
-        }
-    }
+fn execute_program(program_path: &str, program_name: &str, args: &[&str]) {
+    let output = Command::new(program_path)
+        .args(args)
+        .output()
+        .expect("Failed to execute program");
+
+    // Print program output, modifying Arg #0 to show only the program name
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let modified_output = stdout
+        .replace(program_path, program_name); // Replace full path with program name
+    print!("{}", modified_output);
 }
