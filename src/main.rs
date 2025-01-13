@@ -1,12 +1,12 @@
 mod builtins;
+
 use crate::builtins::{cmd_type, echo, exit, BUILD_INS};
 use std::env;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::Command;
 
-/// Find an executable in the PATH environment variable
-fn find_exe(name: &str) -> Option<PathBuf> {
+pub fn find_exe(name: &str) -> Option<PathBuf> {
     if let Ok(paths) = env::var("PATH") {
         for path in env::split_paths(&paths) {
             let exe_path = path.join(name);
@@ -23,7 +23,6 @@ fn main() {
         print!("$ ");
         io::stdout().flush().unwrap();
 
-        // Wait for user input
         let stdin = io::stdin();
         let mut input = String::new();
         stdin.read_line(&mut input).unwrap();
@@ -40,7 +39,7 @@ fn main() {
             match cmd {
                 "exit" => exit(args),
                 "echo" => echo(args),
-                "type" => cmd_type(cmd, args),
+                "type" => cmd_type(args),
                 _ => unreachable!(),
             };
         } else if let Some(path) = find_exe(cmd) {
@@ -49,31 +48,7 @@ fn main() {
                 .status()
                 .expect("failed to execute process");
         } else {
-            println!("{}: command not found", cmd)
+            println!("{}: command not found", cmd);
         }
-    }
-}
-
-// Implementation of `cmd_type`
-pub fn cmd_type(cmd: &str, args: &[&str]) {
-    if args.len() != 1 {
-        println!("type: expected 1 argument, got {}", args.len());
-        return;
-    }
-
-    let query = args[0];
-    let builtins = ["exit", "echo", "type"];
-
-    if builtins.contains(&query) {
-        println!("{} is a shell builtin", query);
-    } else if let Some(path) = find_exe(query) {
-        // Strip directory path for expected output
-        if let Some(name) = path.file_name() {
-            println!("{} is {}", query, name.to_string_lossy());
-        } else {
-            println!("{}: not found", query);
-        }
-    } else {
-        println!("{}: not found", query);
     }
 }
