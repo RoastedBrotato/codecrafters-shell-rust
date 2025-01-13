@@ -21,12 +21,8 @@ pub fn cmd_type(_cmd: &str, args: &[&str]) {
     if builtins.contains(&query) {
         println!("{} is a shell builtin", query);
     } else if let Some(path) = super::find_exe(query) {
-        // Strip directory path for expected output
-        if let Some(name) = path.file_name() {
-            println!("{} is {}", query, name.to_string_lossy());
-        } else {
-            println!("{}: not found", query);
-        }
+        // Show the full path for the type command
+        println!("{} is {}", query, path.to_string_lossy());
     } else {
         println!("{}: not found", query);
     }
