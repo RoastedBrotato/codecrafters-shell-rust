@@ -1,5 +1,5 @@
+use std::fs;
 use std::io::{self, Write};
-use std::process::Command;
 
 fn main() {
     let stdin = io::stdin();
@@ -19,15 +19,30 @@ fn main() {
 
         match argv[0] {
             "exit" => break,
+            "type" => handle_type_command(&argv[1..], &path_env),
             _ => {
-                // Attempt to locate and execute the command
-                if let Some(full_path) = locate_program(&path_env, argv[0]) {
-                    execute_program(&full_path, argv[0], &argv[1..]);
-                } else {
-                    println!("{}: command not found", argv[0]);
-                }
+                println!("{}: command not found", argv[0]);
             }
         }
+    }
+}
+
+/// Handle the `type` built-in command
+fn handle_type_command(args: &[&str], path_env: &str) {
+    if args.len() != 1 {
+        println!("type: expected 1 argument, got {}", args.len());
+        return;
+    }
+
+    let cmd = args[0];
+    let builtins = ["exit", "echo", "type"];
+
+    if builtins.contains(&cmd) {
+        println!("{} is a shell builtin", cmd);
+    } else if let Some(full_path) = locate_program(path_env, cmd) {
+        println!("{} is {}", cmd, full_path);
+    } else {
+        println!("{}: not found", cmd);
     }
 }
 
@@ -35,23 +50,9 @@ fn main() {
 fn locate_program(path_env: &str, program: &str) -> Option<String> {
     for dir in path_env.split(':') {
         let full_path = format!("{}/{}", dir, program);
-        if std::fs::metadata(&full_path).is_ok() {
+        if fs::metadata(&full_path).is_ok() {
             return Some(full_path);
         }
     }
     None
-}
-
-/// Execute the program with its arguments
-fn execute_program(program_path: &str, program_name: &str, args: &[&str]) {
-    let output = Command::new(program_path)
-        .args(args)
-        .output()
-        .expect("Failed to execute program");
-
-    // Print program output, modifying Arg #0 to show only the program name
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let modified_output = stdout
-        .replace(program_path, program_name); // Replace full path with program name
-    print!("{}", modified_output);
 }
