@@ -1,9 +1,11 @@
+#[allow(unused_imports)]
 use std::io::{self, Write};
-use std::process::Command;
 
 fn main() {
     let stdin = io::stdin();
     let path_env = std::env::var("PATH").unwrap();
+
+    let builtins = ["exit", "echo", "type"];
 
     loop {
         print!("$ ");
@@ -19,41 +21,27 @@ fn main() {
 
         match argv[0] {
             "exit" => break,
-            _ => {
-                let program = argv[0];
-                let args = &argv[1..];
-
-                // Locate the program using PATH
-                let program_path = locate_program(&path_env, program);
-
-                match program_path {
-                    Some(_) => {
-                        // Execute the program using only its name
-                        match Command::new(program)
-                            .args(args)
-                            .output()
-                        {
-                            Ok(output) => {
-                                // Print stdout
-                                if !output.stdout.is_empty() {
-                                    print!("{}", String::from_utf8_lossy(&output.stdout));
-                                }
-                                // Print stderr
-                                if !output.stderr.is_empty() {
-                                    eprint!("{}", String::from_utf8_lossy(&output.stderr));
-                                }
-                            }
-                            Err(err) => {
-                                // Error while executing the program
-                                eprintln!("{}: failed to execute: {}", program, err);
-                            }
-                        }
-                    }
-                    None => {
-                        // Program not found
-                        eprintln!("{}: command not found", program);
-                    }
+            "echo" => {
+                println!("{}", argv[1..].join(" "));
+            }
+            "type" => {
+                if argv.len() != 2 {
+                    println!("type: expected 1 argument, got {}", argv.len() - 1);
+                    continue;
                 }
+
+                let cmd = argv[1];
+
+                if builtins.contains(&cmd) {
+                    println!("{} is a shell builtin", cmd);
+                } else if let Some(path) = locate_program(&path_env, cmd) {
+                    println!("{} is {}", cmd, path);
+                } else {
+                    println!("{} not found", cmd);
+                }
+            }
+            _ => {
+                println!("{}: command not found", argv[0]);
             }
         }
     }
