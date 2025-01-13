@@ -27,9 +27,12 @@ fn main() {
                 let program_path = locate_program(&path_env, program);
 
                 match program_path {
-                    Some(full_path) => {
-                        // Execute the program
-                        match Command::new(full_path).args(args).output() {
+                    Some(_) => {
+                        // Execute the program using only its name
+                        match Command::new(program)
+                            .args(args)
+                            .output()
+                        {
                             Ok(output) => {
                                 // Print stdout
                                 if !output.stdout.is_empty() {
