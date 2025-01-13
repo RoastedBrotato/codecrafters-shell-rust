@@ -25,7 +25,6 @@ fn main() {
         stdin.read_line(&mut input).unwrap();
         let cmds: Vec<_> = input.split_whitespace().collect();
         if cmds.is_empty() {
-            return;
             continue;
         }
         let cmd = cmds[0];
@@ -47,3 +46,4 @@ fn main() {
         }
     }
 }
+
