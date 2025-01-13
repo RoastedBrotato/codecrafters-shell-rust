@@ -1,49 +1,68 @@
-mod builtins;
-use crate::builtins::{cmd_type, echo, exit, BUILD_INS};
-use std::env;
 use std::io::{self, Write};
-use std::path::PathBuf;
 use std::process::Command;
-fn find_exe(name: &str) -> Option<PathBuf> {
-    if let Ok(paths) = env::var("PATH") {
-        for path in env::split_paths(&paths) {
-            let exe_path = path.join(name);
-            if exe_path.is_file() {
-                return Some(exe_path);
-            }
-        }
-    }
-    None
-}
+
 fn main() {
+    let stdin = io::stdin();
+    let path_env = std::env::var("PATH").unwrap();
+
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
-        // Wait for user input
-        let stdin = io::stdin();
+
         let mut input = String::new();
         stdin.read_line(&mut input).unwrap();
-        let cmds: Vec<_> = input.split_whitespace().collect();
-        if cmds.is_empty() {
+
+        let argv: Vec<&str> = input.trim().split_whitespace().collect();
+        if argv.is_empty() {
             continue;
         }
-        let cmd = cmds[0];
-        let args = &cmds[1..];
-        if BUILD_INS.contains(&cmd) {
-            match cmd {
-                "exit" => exit(args),
-                "echo" => echo(args),
-                "type" => cmd_type(args),
-                _ => unreachable!(),
-            };
-        } else if let Some(path) = find_exe(cmd) {
-            Command::new(path)
-                .args(args)
-                .status()
-                .expect("failed to execute process");
-        } else {
-            println!("{}: command not found", cmd)
+
+        match argv[0] {
+            "exit" => break,
+            _ => {
+                let program = argv[0];
+                let args = &argv[1..];
+
+                // Locate the program using PATH
+                let program_path = locate_program(&path_env, program);
+
+                match program_path {
+                    Some(full_path) => {
+                        // Execute the program
+                        match Command::new(full_path).args(args).output() {
+                            Ok(output) => {
+                                // Print stdout
+                                if !output.stdout.is_empty() {
+                                    print!("{}", String::from_utf8_lossy(&output.stdout));
+                                }
+                                // Print stderr
+                                if !output.stderr.is_empty() {
+                                    eprint!("{}", String::from_utf8_lossy(&output.stderr));
+                                }
+                            }
+                            Err(err) => {
+                                // Error while executing the program
+                                eprintln!("{}: failed to execute: {}", program, err);
+                            }
+                        }
+                    }
+                    None => {
+                        // Program not found
+                        eprintln!("{}: command not found", program);
+                    }
+                }
+            }
         }
     }
 }
 
+/// Locate a program in the directories specified by the PATH environment variable
+fn locate_program(path_env: &str, program: &str) -> Option<String> {
+    for dir in path_env.split(':') {
+        let full_path = format!("{}/{}", dir, program);
+        if std::fs::metadata(&full_path).is_ok() {
+            return Some(full_path);
+        }
+    }
+    None
+}
