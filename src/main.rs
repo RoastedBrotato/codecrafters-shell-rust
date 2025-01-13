@@ -1,58 +1,79 @@
-use std::fs;
+mod builtins;
+use crate::builtins::{cmd_type, echo, exit, BUILD_INS};
+use std::env;
 use std::io::{self, Write};
+use std::path::PathBuf;
+use std::process::Command;
+
+/// Find an executable in the PATH environment variable
+fn find_exe(name: &str) -> Option<PathBuf> {
+    if let Ok(paths) = env::var("PATH") {
+        for path in env::split_paths(&paths) {
+            let exe_path = path.join(name);
+            if exe_path.is_file() {
+                return Some(exe_path);
+            }
+        }
+    }
+    None
+}
 
 fn main() {
-    let stdin = io::stdin();
-    let path_env = std::env::var("PATH").unwrap();
-
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
 
+        // Wait for user input
+        let stdin = io::stdin();
         let mut input = String::new();
         stdin.read_line(&mut input).unwrap();
 
-        let argv: Vec<&str> = input.trim().split_whitespace().collect();
-        if argv.is_empty() {
+        let cmds: Vec<_> = input.split_whitespace().collect();
+        if cmds.is_empty() {
             continue;
         }
 
-        match argv[0] {
-            "exit" => break,
-            "type" => handle_type_command(&argv[1..], &path_env),
-            _ => {
-                println!("{}: command not found", argv[0]);
-            }
+        let cmd = cmds[0];
+        let args = &cmds[1..];
+
+        if BUILD_INS.contains(&cmd) {
+            match cmd {
+                "exit" => exit(args),
+                "echo" => echo(args),
+                "type" => cmd_type(cmd, args),
+                _ => unreachable!(),
+            };
+        } else if let Some(path) = find_exe(cmd) {
+            Command::new(path)
+                .args(args)
+                .status()
+                .expect("failed to execute process");
+        } else {
+            println!("{}: command not found", cmd)
         }
     }
 }
 
-/// Handle the `type` built-in command
-fn handle_type_command(args: &[&str], path_env: &str) {
+// Implementation of `cmd_type`
+pub fn cmd_type(cmd: &str, args: &[&str]) {
     if args.len() != 1 {
         println!("type: expected 1 argument, got {}", args.len());
         return;
     }
 
-    let cmd = args[0];
+    let query = args[0];
     let builtins = ["exit", "echo", "type"];
 
-    if builtins.contains(&cmd) {
-        println!("{} is a shell builtin", cmd);
-    } else if let Some(full_path) = locate_program(path_env, cmd) {
-        println!("{} is {}", cmd, full_path);
-    } else {
-        println!("{}: not found", cmd);
-    }
-}
-
-/// Locate a program in the directories specified by the PATH environment variable
-fn locate_program(path_env: &str, program: &str) -> Option<String> {
-    for dir in path_env.split(':') {
-        let full_path = format!("{}/{}", dir, program);
-        if fs::metadata(&full_path).is_ok() {
-            return Some(full_path);
+    if builtins.contains(&query) {
+        println!("{} is a shell builtin", query);
+    } else if let Some(path) = find_exe(query) {
+        // Strip directory path for expected output
+        if let Some(name) = path.file_name() {
+            println!("{} is {}", query, name.to_string_lossy());
+        } else {
+            println!("{}: not found", query);
         }
+    } else {
+        println!("{}: not found", query);
     }
-    None
 }
