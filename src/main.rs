@@ -39,11 +39,11 @@ fn main() {
             match cmd {
                 "exit" => exit(args),
                 "echo" => echo(args),
-                "type" => cmd_type(cmd, args), // Updated to pass `cmd` as the first argument
+                "type" => cmd_type(args),
                 _ => unreachable!(),
             };
         } else if let Some(path) = find_exe(cmd) {
-            Command::new(path)
+            Command::new(cmd)
                 .args(args)
                 .status()
                 .expect("failed to execute process");
