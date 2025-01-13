@@ -39,7 +39,7 @@ fn main() {
             match cmd {
                 "exit" => exit(args),
                 "echo" => echo(args),
-                "type" => cmd_type(args),
+                "type" => cmd_type(cmd, args), // Updated to pass `cmd` as the first argument
                 _ => unreachable!(),
             };
         } else if let Some(path) = find_exe(cmd) {
