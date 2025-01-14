@@ -83,8 +83,15 @@ fn main() {
                     let Some(command) = commands.first() else {
                         continue;
                     };
-                    if let Some(command) = find_command_in_paths(command, &path) {
-                        let out = Command::new(command)
+                    if let Some(program_name) = find_command_in_paths(command, &path) {
+                        let full_path = paths.as_ref().ok().and_then(|paths| {
+                            paths.iter().find_map(|path| {
+                                let path = path.join(&program_name);
+                                path.exists().then(|| path)
+                            })
+                        }).unwrap();
+                
+                        let out = Command::new(full_path)
                             .current_dir(&current_dir)
                             .args(&commands[1..])
                             .output()
@@ -175,7 +182,7 @@ fn find_command_in_paths(cmd: &str, paths: &Result<Vec<PathBuf>, env::VarError>)
     paths.as_ref().ok().and_then(|paths| {
         paths.iter().find_map(|path| {
             let path = path.join(cmd);
-            path.exists().then(|| path.to_string_lossy().to_string())
+            path.exists().then(|| cmd.to_string())
         })
     })
 }
