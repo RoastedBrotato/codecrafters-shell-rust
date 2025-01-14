@@ -13,6 +13,17 @@ pub fn exit(args: &[&str]) {
     std::process::exit(code);
 }
 
+pub fn cd(args: &[&str]) {
+    if args.is_empty() {
+        eprintln!("cd: missing argument");
+        return;
+    }
+
+    let path = args[0];
+    if let Err(err) = env::set_current_dir(path) {
+        eprintln!("cd: {}: {}", path, err);
+    }
+}
 
 pub fn cmd_type(_cmd: &str, args: &[&str]) {
     if args.is_empty() {
@@ -47,4 +58,4 @@ pub fn pwd() {
     }
 }
 
-pub const BUILD_INS: &[&str] = &["exit", "echo", "type", "pwd"];
+pub const BUILD_INS: &[&str] = &["exit", "echo", "type", "pwd", "cd"];

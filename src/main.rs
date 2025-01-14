@@ -1,126 +1,60 @@
-use std::path::{Path, PathBuf};
-use std::process::exit;
-use std::process::Command;
-use std::{env, fs};
-//use std::io::prelude::*;
-#[allow(unused_imports)]
+mod builtins;
+
+use crate::builtins::{cmd_type, echo, exit, pwd, BUILD_INS};
+use std::env;
 use std::io::{self, Write};
-fn main() {
-    let stdin = io::stdin();
-    let mut input = String::new();
-    print!("$ ");
-    io::stdout().flush().unwrap();
-    while stdin.read_line(&mut input).is_ok() {
-        let input_string = input.strip_suffix('\n').unwrap();
-        if let Some(command) = parse_input(input_string) {
-            match command {
-                ShellCommand::EXIT(val) => exit(val),
-                ShellCommand::ECHO(argument) => {
-                    println!("{}", argument);
-                }
-                ShellCommand::TYPE(argument) => match type_of_command(argument) {
-                    CommandType::Builtin => {
-                        println!("{} is a shell builtin", argument);
-                    }
-                    CommandType::Program(path) => {
-                        println!("{} is {}", argument, path.to_str().unwrap());
-                    }
-                    CommandType::Nonexistent => {
-                        println!("{} not found", argument);
-                    }
-                },
-                ShellCommand::PWD() => {
-                    println!("{}", std::env::current_dir().unwrap().to_str().unwrap())
-                }
-                ShellCommand::CD(argument) => {
-                    if std::env::set_current_dir(Path::new(argument)).is_err() {
-                        println!("cd: {}: No such file or directory", argument);
-                    }
-                }
-                ShellCommand::Program((command, arguments)) => {
-                    let command_type = type_of_command(command);
-                    match command_type {
-                        CommandType::Nonexistent => {
-                            println!("{}: command not found", input_string);
-                        }
-                        CommandType::Program(path) => {
-                            let output = Command::new(path)
-                                .args(arguments.split(' '))
-                                .output()
-                                .expect("fail to run program");
-                            print!("{}", String::from_utf8_lossy(&output.stdout))
-                        }
-                        CommandType::Builtin => {}
-                    };
-                }
+use std::path::PathBuf;
+use std::process::Command;
+use std::os::unix::process::CommandExt;
+
+
+pub fn find_exe(name: &str) -> Option<PathBuf> {
+    if let Ok(paths) = env::var("PATH") {
+        for path in env::split_paths(&paths) {
+            let exe_path = path.join(name);
+            if exe_path.is_file() {
+                return Some(exe_path);
             }
-        } else {
-            println!("{}: command not found", input_string);
         }
-        input.clear();
+    }
+    None
+}
+
+fn main() {
+    loop {
         print!("$ ");
         io::stdout().flush().unwrap();
-    }
-}
-#[derive(Debug, Clone)]
-pub enum ShellCommand<'a> {
-    EXIT(i32),
-    ECHO(&'a str),
-    CD(&'a str),
-    TYPE(&'a str), //ERROR(&'a str),
-    PWD(),
-    Program((&'a str, &'a str)),
-}
-fn parse_input(input: &str) -> Option<ShellCommand> {
-    let (command, arguments) = match input.find(' ') {
-        Some(_index) => input.split_once(' ')?,
-        None => (input, ""),
-    };
-    match command {
-        "exit" => Some(ShellCommand::EXIT(arguments.parse::<i32>().unwrap())),
-        "echo" => Some(ShellCommand::ECHO(arguments)),
-        "type" => Some(ShellCommand::TYPE(arguments)),
-        "pwd" => Some(ShellCommand::PWD()),
-        "cd" => Some(ShellCommand::CD(arguments)),
-        _default => Some(ShellCommand::Program((command, arguments))),
-    }
-}
-#[derive(Debug, Clone)]
-pub enum CommandType {
-    Builtin,
-    Nonexistent,
-    Program(PathBuf),
-}
-fn type_of_command(command: &str) -> CommandType {
-    match command {
-        "echo" => CommandType::Builtin,
-        "exit" => CommandType::Builtin,
-        "type" => CommandType::Builtin,
-        "pwd" => CommandType::Builtin,
-        "cd" => CommandType::Builtin,
-        _default => {
-            if let Ok(path) = env::var("PATH") {
-                let paths: Vec<&str> = path.split(':').collect();
-                for path in paths.iter() {
-                    //println!("{}", path);
-                    let folder = match fs::read_dir(path) {
-                        Ok(fold) => fold,
-                        Err(_err) => continue,
-                    };
-                    for item in folder.into_iter() {
-                        if item.as_ref().unwrap().file_name() == command {
-                            return CommandType::Program(item.unwrap().path());
-                        }
-                    }
-                }
-                let full_path = Path::new(command);
-                if full_path.exists() {
-                    return CommandType::Program(full_path.to_path_buf());
-                }
-                CommandType::Nonexistent
-            } else {
-                CommandType::Nonexistent
-            }
+
+        let stdin = io::stdin();
+        let mut input = String::new();
+        stdin.read_line(&mut input).unwrap();
+
+        let cmds: Vec<_> = input.split_whitespace().collect();
+        if cmds.is_empty() {
+            continue;
+        }
+
+        let cmd = cmds[0];
+        let args = &cmds[1..];
+
+        if BUILD_INS.contains(&cmd) {
+            match cmd {
+                "exit" => exit(args),
+                "echo" => echo(args),
+                "type" => cmd_type(cmd, args),
+                "pwd" => pwd(),
+                "cd" => cd(args),
+                _ => unreachable!(),
+            };
+        } else if let Some(path) = find_exe(cmd) {
+            // Create command using just the base name, but execute with full path
+            Command::new(&path)
+                .arg0(cmd)  // This sets the program name as seen by the program
+                .args(args)
+                .status()
+                .expect("failed to execute process");
+        } else {
+            println!("{}: command not found", cmd);
         }
     }
 }
