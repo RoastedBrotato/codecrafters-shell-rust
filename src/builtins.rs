@@ -11,26 +11,24 @@ pub fn exit(args: &[&str]) {
     std::process::exit(code);
 }
 
-pub fn cmd_type(cmd: &str, _args: &[&str]) {
-    // Check if the command is a shell builtin
-    if super::BUILD_INS.contains(&cmd) {
-        println!("{} is a shell builtin", cmd);
+pub fn cmd_type(_cmd: &str, args: &[&str]) {
+    if args.is_empty() {
+        eprintln!("type: missing operand");
         return;
     }
 
-    // Check if the command is an executable in the PATH
-    if let Ok(paths) = env::var("PATH") {
-        for path in env::split_paths(&paths) {
-            let exe_path = path.join(cmd);
-            if exe_path.is_file() && is_executable(&exe_path) {
-                println!("{} is {}", cmd, exe_path.display());
-                return;
-            }
-        }
-    }
+    let command = args[0];
 
-    // If no match is found, print a not found message
-    println!("{}: not found", cmd);
+    // Check if it's a shell builtin
+    if BUILD_INS.contains(&command) {
+        println!("{} is a shell builtin", command);
+    }
+    // Check if it's an executable in the PATH
+    else if let Some(path) = find_exe(command) {
+        println!("{} is {}", command, path.display());
+    } else {
+        println!("{}: not found", command);
+    }
 }
 
 pub fn is_executable(path: &Path) -> bool {
