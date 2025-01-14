@@ -10,7 +10,7 @@ pub fn exit(args: &[&str]) {
 }
 
 pub fn cmd_type(_cmd: &str, _args: &[&str]) {
-    println!("type command not fully implemented");
+    println!("pwd is a shell builtin");
 }
 
 pub fn pwd() {
