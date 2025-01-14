@@ -3,12 +3,12 @@ use std::io::{self, Write};
 use std::process::{Command, exit};
 
 fn echo(args: &[&str]) {
-    // Handle single quotes
     let args_with_quotes: Vec<String> = args
         .iter()
         .map(|arg| {
-            if arg.starts_with("'") && arg.ends_with("'") {
-                arg[1..arg.len()-1].to_string() // Strip surrounding single quotes
+            // Check if the argument starts and ends with single quotes
+            if arg.starts_with("'") && arg.ends_with("'") && arg.len() > 1 {
+                arg[1..arg.len()-1].to_string() // Remove the surrounding single quotes
             } else {
                 arg.to_string()
             }
