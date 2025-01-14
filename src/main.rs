@@ -43,7 +43,7 @@ fn main() {
                     }
                 }
                 "echo" => {
-                    echo(&commands[1..]);
+                    println!("{}", commands[1..].join(" "));
                 }
                 "type" => {
                     let Some(cmd) = commands.get(1).map(|x| x.as_str()) else {
@@ -103,31 +103,48 @@ fn main() {
 }
 fn parse_input(input: &String) -> Option<Vec<String>> {
     let input = input.trim();
-    let (cmd, rest) = input.split_once(" ").unwrap_or((input, ""));
-    let mut result = vec![cmd.to_string()];
-    let mut rest = rest.trim();
-    while !rest.is_empty() {
-        match rest.chars().next().unwrap() {
+    if input.is_empty() {
+        return Some(vec![]);
+    }
+
+    let mut result = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+    let mut chars = input.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        match c {
             '\'' => {
-                let (arg, r) = rest[1..].split_once('\'')?;
-                result.push(arg.to_string());
-                rest = r;
+                if in_quotes {
+                    // End of quoted section
+                    in_quotes = false;
+                    // Check if next char is another quote
+                    if chars.peek() == Some(&'\'') {
+                        in_quotes = true;
+                        chars.next(); // consume the next quote
+                    }
+                } else {
+                    // Start of quoted section
+                    in_quotes = true;
+                }
             }
-            ' ' => {
-                rest = rest.trim_start();
+            ' ' if !in_quotes => {
+                if !current.is_empty() {
+                    result.push(current);
+                    current = String::new();
+                }
             }
-            _c => {
-                let (arg, r) = rest.split_once(' ').unwrap_or((rest, ""));
-                result.push(arg.to_string());
-                rest = r;
+            _ => {
+                current.push(c);
             }
         }
     }
+
+    if !current.is_empty() {
+        result.push(current);
+    }
+
     Some(result)
-    // input
-    //     .split_ascii_whitespace()
-    //     .map(|x| x.to_string())
-    //     .collect::<Vec<_>>()
 }
 fn resolve_relative_path(target: &str, current_dir: &Path) -> PathBuf {
     let mut path: PathBuf = PathBuf::new();
@@ -161,35 +178,4 @@ fn find_command_in_paths(cmd: &str, paths: &Result<Vec<PathBuf>, env::VarError>)
             path.exists().then(|| path.to_string_lossy().to_string())
         })
     })
-}
-
-fn echo(args: &[&str]) {
-    let mut result = String::new();
-    let mut in_quotes = false;
-    let mut quoted_arg = String::new();
-
-    for arg in args {
-        if arg.starts_with('\'') {
-            in_quotes = true;
-            quoted_arg.push_str(&arg[1..]);
-        } else if arg.ends_with('\'') {
-            in_quotes = false;
-            quoted_arg.push_str(&arg[..arg.len()-1]);
-            result.push_str(&quoted_arg);
-            quoted_arg.clear();
-        } else if in_quotes {
-            quoted_arg.push_str(arg);
-        } else {
-            if !result.is_empty() {
-                result.push(' ');
-            }
-            result.push_str(arg);
-        }
-    }
-
-    if !quoted_arg.is_empty() {
-        result.push_str(&quoted_arg);
-    }
-
-    println!("{}", result);
 }
