@@ -1,23 +1,38 @@
-mod builtins;
-
-use crate::builtins::{cmd_type, echo, exit, pwd, cd, BUILD_INS};
 use std::env;
 use std::io::{self, Write};
-use std::path::PathBuf;
-use std::process::Command;
-use std::os::unix::process::CommandExt;
+use std::process::{Command, exit};
 
-
-pub fn find_exe(name: &str) -> Option<PathBuf> {
-    if let Ok(paths) = env::var("PATH") {
-        for path in env::split_paths(&paths) {
-            let exe_path = path.join(name);
-            if exe_path.is_file() {
-                return Some(exe_path);
+fn echo(args: &[&str]) {
+    // Handle single quotes
+    let args_with_quotes: Vec<String> = args
+        .iter()
+        .map(|arg| {
+            if arg.starts_with("'") && arg.ends_with("'") {
+                arg[1..arg.len()-1].to_string() // Strip surrounding single quotes
+            } else {
+                arg.to_string()
             }
-        }
+        })
+        .collect();
+        
+    println!("{}", args_with_quotes.join(" "));
+}
+
+fn cat(args: &[&str]) {
+    // Handle single quotes similarly for cat command
+    for arg in args {
+        let arg_without_quotes = if arg.starts_with("'") && arg.ends_with("'") {
+            &arg[1..arg.len()-1] // Remove the single quotes from file names
+        } else {
+            arg
+        };
+        
+        // Simulate reading the file (in reality, you would open and read the file here)
+        println!("Reading file: {}", arg_without_quotes);
+        // You can add actual file reading code here, for example:
+        // let content = std::fs::read_to_string(arg_without_quotes).unwrap();
+        // println!("{}", content);
     }
-    None
 }
 
 fn main() {
@@ -37,24 +52,10 @@ fn main() {
         let cmd = cmds[0];
         let args = &cmds[1..];
 
-        if BUILD_INS.contains(&cmd) {
-            match cmd {
-                "exit" => exit(args),
-                "echo" => echo(args),
-                "type" => cmd_type(cmd, args),
-                "pwd" => pwd(),
-                "cd" => cd(args),
-                _ => unreachable!(),
-            };
-        } else if let Some(path) = find_exe(cmd) {
-            // Create command using just the base name, but execute with full path
-            Command::new(&path)
-                .arg0(cmd)  // This sets the program name as seen by the program
-                .args(args)
-                .status()
-                .expect("failed to execute process");
-        } else {
-            println!("{}: command not found", cmd);
+        match cmd {
+            "echo" => echo(args),
+            "cat" => cat(args),
+            _ => println!("Command not found: {}", cmd),
         }
     }
 }
