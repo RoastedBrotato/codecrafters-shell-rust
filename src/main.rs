@@ -32,7 +32,7 @@ fn main() {
         exit(-1);
     };
     while stdin.read_line(&mut input).is_ok() {
-        let commands: Vec<String> = parse_input(&input).expect("commmand parse error");
+        let commands: Vec<String> = parse_input(&input).expect("command parse error");
         if let Some(command) = commands.first() {
             match command.as_str() {
                 "exit" => {
@@ -171,7 +171,7 @@ fn parse_echo_args(args: &[String]) -> String {
     let mut is_first = true;
 
     for arg in args {
-        if arg.starts_with('\'') && arg.ends_with('\'') {
+        if arg.starts_with('\'') && arg.ends_with('\'') && arg.len() > 1 {
             // Single quoted argument
             if !is_first && !in_quotes {
                 result.push(' ');
