@@ -1,6 +1,6 @@
 use std::env;
 use std::path::Path;
-
+use std::os::unix::fs::PermissionsExt;
 
 pub fn echo(args: &[&str]) {
     println!("{}", args.join(" "));
@@ -33,10 +33,9 @@ pub fn cmd_type(cmd: &str, _args: &[&str]) {
     println!("{}: not found", cmd);
 }
 
-// Helper function to check if a file is executable
-fn is_executable(path: &Path) -> bool {
+pub fn is_executable(path: &Path) -> bool {
     path.metadata()
-        .map(|m| m.permissions().mode() & 0o111 != 0)
+        .map(|m| m.permissions().mode() & 0o111 != 0) // Check if the file is executable
         .unwrap_or(false)
 }
 
