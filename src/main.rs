@@ -7,17 +7,6 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::os::unix::process::CommandExt;
 
-pub fn find_exe(name: &str) -> Option<PathBuf> {
-    if let Ok(paths) = env::var("PATH") {
-        for path in env::split_paths(&paths) {
-            let exe_path = path.join(name);
-            if exe_path.is_file() {
-                return Some(exe_path);
-            }
-        }
-    }
-    None
-}
 
 fn main() {
     loop {

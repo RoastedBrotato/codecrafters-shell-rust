@@ -1,16 +1,30 @@
 use std::env;
 use std::path::Path;
 use std::os::unix::fs::PermissionsExt;
+use std::path::PathBuf;
+
 
 pub fn echo(args: &[&str]) {
     println!("{}", args.join(" "));
 }
+
 
 pub fn exit(args: &[&str]) {
     let code = args.get(0).and_then(|s| s.parse::<i32>().ok()).unwrap_or(0);
     std::process::exit(code);
 }
 
+pub fn find_exe(name: &str) -> Option<PathBuf> {
+    if let Ok(paths) = env::var("PATH") {
+        for path in env::split_paths(&paths) {
+            let exe_path = path.join(name);
+            if exe_path.is_file() {
+                return Some(exe_path);
+            }
+        }
+    }
+    None
+}
 
 pub fn cmd_type(_cmd: &str, args: &[&str]) {
     if args.is_empty() {
