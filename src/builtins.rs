@@ -19,8 +19,16 @@ pub fn cd(args: &[&str]) {
         return;
     }
 
-    let path = args[0];
-    if let Err(_) = env::set_current_dir(path) {
+    let path = if args[0] == "~" {
+        env::var("HOME").unwrap_or_else(|_| {
+            eprintln!("cd: HOME environment variable is not set");
+            return;
+        })
+    } else {
+        args[0].to_string()
+    };
+
+    if let Err(_) = env::set_current_dir(&path) {
         eprintln!("cd: {}: No such file or directory", path);
     }
 }
