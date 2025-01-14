@@ -167,35 +167,27 @@ fn find_command_in_paths(cmd: &str, paths: &Result<Vec<PathBuf>, env::VarError>)
 
 fn parse_echo_args(args: &[String]) -> String {
     let mut result = String::new();
-    let mut in_quotes = false;
-    let mut is_first = true;
+    let mut prev_was_quoted = false;
 
-    for arg in args {
-        if arg.starts_with('\'') && arg.ends_with('\'') && arg.len() > 1 {
-            // Single quoted argument
-            if !is_first && !in_quotes {
-                result.push(' ');
-            }
+    for (i, arg) in args.iter().enumerate() {
+        let is_quoted = arg.starts_with('\'') && arg.ends_with('\'');
+        
+        // Add space only if:
+        // - Not the first argument
+        // - Previous arg wasn't quoted OR current arg isn't quoted
+        if i > 0 && !(prev_was_quoted && is_quoted) {
+            result.push(' ');
+        }
+
+        if is_quoted {
+            // Handle fully quoted argument
             result.push_str(&arg[1..arg.len()-1]);
-        } else if arg.starts_with('\'') {
-            // Start of quoted section
-            if !is_first && !in_quotes {
-                result.push(' ');
-            }
-            in_quotes = true;
-            result.push_str(&arg[1..]);
-        } else if arg.ends_with('\'') {
-            // End of quoted section
-            in_quotes = false;
-            result.push_str(&arg[..arg.len()-1]);
         } else {
-            // Normal argument or middle of quoted section
-            if !is_first && !in_quotes {
-                result.push(' ');
-            }
+            // Handle unquoted argument
             result.push_str(arg);
         }
-        is_first = false;
+
+        prev_was_quoted = is_quoted;
     }
 
     result
