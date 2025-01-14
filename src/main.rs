@@ -26,7 +26,8 @@ fn main() {
     // Wait for user input
     let stdin = io::stdin();
     let mut input = String::new();
-    let path = env::var("PATH").map(|x| env::split_paths(&x).collect::<Vec<_>>());
+    let path_var = env::var("PATH").ok();
+    let paths = path_var.as_ref().map(|p| env::split_paths(p).collect::<Vec<_>>());
     let Ok(mut current_dir) = env::current_dir() else {
         println!("current directory does not exist");
         exit(-1);
@@ -51,7 +52,7 @@ fn main() {
                     };
                     if BUILTIN.binary_search(&cmd).is_ok() {
                         println!("{cmd} is a shell builtin");
-                    } else if let Some(cmd_absolutepath) = find_command_in_paths(cmd, &path) {
+                    } else if let Some(cmd_absolutepath) = find_command_in_paths(cmd, &paths) {
                         println!("{cmd} is {cmd_absolutepath}");
                     }
                 }
@@ -176,10 +177,8 @@ fn resolve_relative_path(target: &str, current_dir: &Path) -> PathBuf {
     }
     path
 }
-fn find_command_in_paths(cmd: &str, paths: &Result<Vec<PathBuf>, env::VarError>) -> Option<String> {
-    let Ok(paths) = paths else {
-        return None;
-    };
+fn find_command_in_paths(cmd: &str, paths: &Option<Vec<PathBuf>>) -> Option<String> {
+    let paths = paths.as_ref()?;
     
     for path in paths {
         let full_path = path.join(cmd);
