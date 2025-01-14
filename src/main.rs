@@ -1,6 +1,6 @@
 mod builtins;
 
-use crate::builtins::{cmd_type, echo, exit, pwd, BUILD_INS};
+use crate::builtins::{cmd_type, echo, exit, pwd, cd, BUILD_INS};
 use std::env;
 use std::io::{self, Write};
 use std::path::PathBuf;
