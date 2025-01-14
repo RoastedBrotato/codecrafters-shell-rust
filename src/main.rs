@@ -33,7 +33,7 @@ fn main() {
         exit(-1);
     };
     while stdin.read_line(&mut input).is_ok() {
-        let commands: Vec<String> = parse_input(&input).expect("commmand parse error");
+        let commands: Vec<String> = parse_input(&input).expect("command parse error");
         if let Some(command) = commands.first() {
             match command.as_str() {
                 "exit" => {
