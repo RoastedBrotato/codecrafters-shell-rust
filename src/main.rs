@@ -174,13 +174,13 @@ fn parse_echo_args(args: &[String]) -> String {
         if arg.starts_with('\'') && arg.ends_with('\'') {
             // Single quoted argument
             if !is_first && !in_quotes {
-                result.push('');
+                result.push(' ');
             }
             result.push_str(&arg[1..arg.len()-1]);
         } else if arg.starts_with('\'') {
             // Start of quoted section
             if !is_first && !in_quotes {
-                result.push('');
+                result.push(' ');
             }
             in_quotes = true;
             result.push_str(&arg[1..]);
@@ -191,7 +191,7 @@ fn parse_echo_args(args: &[String]) -> String {
         } else {
             // Normal argument or middle of quoted section
             if !is_first && !in_quotes {
-                result.push('');
+                result.push(' ');
             }
             result.push_str(arg);
         }
