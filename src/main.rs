@@ -26,14 +26,13 @@ fn main() {
     // Wait for user input
     let stdin = io::stdin();
     let mut input = String::new();
-    let path_var = env::var("PATH").ok();
-    let system_paths = path_var.as_ref().map(|p| env::split_paths(p).collect::<Vec<_>>());
+    let path = env::var("PATH").map(|x| env::split_paths(&x).collect::<Vec<_>>());
     let Ok(mut current_dir) = env::current_dir() else {
         println!("current directory does not exist");
         exit(-1);
     };
     while stdin.read_line(&mut input).is_ok() {
-        let commands: Vec<String> = parse_input(&input).expect("command parse error");
+        let commands: Vec<String> = parse_input(&input).expect("commmand parse error");
         if let Some(command) = commands.first() {
             match command.as_str() {
                 "exit" => {
@@ -52,8 +51,10 @@ fn main() {
                     };
                     if BUILTIN.binary_search(&cmd).is_ok() {
                         println!("{cmd} is a shell builtin");
-                    } else if let Some(cmd_absolutepath) = find_command_in_paths(cmd, &system_paths) {
+                    } else if let Some(cmd_absolutepath) = find_command_in_paths(cmd, &path) {
                         println!("{cmd} is {cmd_absolutepath}");
+                    } else {
+                        println!("{cmd}: not found");
                     }
                 }
                 "pwd" => {
@@ -82,15 +83,8 @@ fn main() {
                     let Some(command) = commands.first() else {
                         continue;
                     };
-                    if let Some(program_name) = find_command_in_paths(command, &path) {
-                        let full_path = paths.as_ref().ok().and_then(|paths| {
-                            paths.iter().find_map(|path| {
-                                let path = path.join(&program_name);
-                                path.exists().then(|| path)
-                            })
-                        }).unwrap();
-                
-                        let out = Command::new(full_path)
+                    if let Some(command) = find_command_in_paths(command, &path) {
+                        let out = Command::new(command)
                             .current_dir(&current_dir)
                             .args(&commands[1..])
                             .output()
@@ -109,48 +103,31 @@ fn main() {
 }
 fn parse_input(input: &String) -> Option<Vec<String>> {
     let input = input.trim();
-    if input.is_empty() {
-        return Some(vec![]);
-    }
-
-    let mut result = Vec::new();
-    let mut current = String::new();
-    let mut in_quotes = false;
-    let mut chars = input.chars().peekable();
-
-    while let Some(c) = chars.next() {
-        match c {
+    let (cmd, rest) = input.split_once(" ").unwrap_or((input, ""));
+    let mut result = vec![cmd.to_string()];
+    let mut rest = rest.trim();
+    while !rest.is_empty() {
+        match rest.chars().next().unwrap() {
             '\'' => {
-                if in_quotes {
-                    // End of quoted section
-                    in_quotes = false;
-                    // Check if next char is another quote
-                    if chars.peek() == Some(&'\'') {
-                        in_quotes = true;
-                        chars.next(); // consume the next quote
-                    }
-                } else {
-                    // Start of quoted section
-                    in_quotes = true;
-                }
+                let (arg, r) = rest[1..].split_once('\'')?;
+                result.push(arg.to_string());
+                rest = r;
             }
-            ' ' if !in_quotes => {
-                if !current.is_empty() {
-                    result.push(current);
-                    current = String::new();
-                }
+            ' ' => {
+                rest = rest.trim_start();
             }
-            _ => {
-                current.push(c);
+            _c => {
+                let (arg, r) = rest.split_once(' ').unwrap_or((rest, ""));
+                result.push(arg.to_string());
+                rest = r;
             }
         }
     }
-
-    if !current.is_empty() {
-        result.push(current);
-    }
-
     Some(result)
+    // input
+    //     .split_ascii_whitespace()
+    //     .map(|x| x.to_string())
+    //     .collect::<Vec<_>>()
 }
 fn resolve_relative_path(target: &str, current_dir: &Path) -> PathBuf {
     let mut path: PathBuf = PathBuf::new();
@@ -177,14 +154,11 @@ fn resolve_relative_path(target: &str, current_dir: &Path) -> PathBuf {
     }
     path
 }
-fn find_command_in_paths(cmd: &str, paths: &Option<Vec<PathBuf>>) -> Option<String> {
-    let paths = paths.as_ref()?;
-    
-    for path in paths {
-        let full_path = path.join(cmd);
-        if full_path.is_file() {
-            return full_path.to_str().map(String::from);
-        }
-    }
-    None
+fn find_command_in_paths(cmd: &str, paths: &Result<Vec<PathBuf>, env::VarError>) -> Option<String> {
+    paths.as_ref().ok().and_then(|paths| {
+        paths.iter().find_map(|path| {
+            let path = path.join(cmd);
+            path.exists().then(|| path.to_string_lossy().to_string())
+        })
+    })
 }
