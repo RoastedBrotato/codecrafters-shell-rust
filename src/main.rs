@@ -43,7 +43,7 @@ fn main() {
                     }
                 }
                 "echo" => {
-                    println!("{}", commands[1..].join(" "));
+                    echo(&commands[1..]);
                 }
                 "type" => {
                     let Some(cmd) = commands.get(1).map(|x| x.as_str()) else {
@@ -161,4 +161,35 @@ fn find_command_in_paths(cmd: &str, paths: &Result<Vec<PathBuf>, env::VarError>)
             path.exists().then(|| path.to_string_lossy().to_string())
         })
     })
+}
+
+fn echo(args: &[&str]) {
+    let mut result = String::new();
+    let mut in_quotes = false;
+    let mut quoted_arg = String::new();
+
+    for arg in args {
+        if arg.starts_with('\'') {
+            in_quotes = true;
+            quoted_arg.push_str(&arg[1..]);
+        } else if arg.ends_with('\'') {
+            in_quotes = false;
+            quoted_arg.push_str(&arg[..arg.len()-1]);
+            result.push_str(&quoted_arg);
+            quoted_arg.clear();
+        } else if in_quotes {
+            quoted_arg.push_str(arg);
+        } else {
+            if !result.is_empty() {
+                result.push(' ');
+            }
+            result.push_str(arg);
+        }
+    }
+
+    if !quoted_arg.is_empty() {
+        result.push_str(&quoted_arg);
+    }
+
+    println!("{}", result);
 }
