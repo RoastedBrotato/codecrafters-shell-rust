@@ -8,15 +8,16 @@ fn echo(args: &[&str]) {
         .map(|arg| {
             // Check if the argument starts and ends with single quotes
             if arg.starts_with("'") && arg.ends_with("'") && arg.len() > 1 {
-                // Remove the surrounding single quotes and return the substring
+                // Remove the surrounding single quotes
                 arg[1..arg.len()-1].to_string()
             } else {
-                // Return the argument as is if it's not enclosed in quotes
+                // Otherwise, leave the argument as is
                 arg.to_string()
             }
         })
         .collect();
-        
+
+    // Join arguments with a space and print the result
     println!("{}", args_with_quotes.join(" "));
 }
 
