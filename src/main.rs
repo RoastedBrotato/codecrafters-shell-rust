@@ -167,32 +167,35 @@ fn find_command_in_paths(cmd: &str, paths: &Result<Vec<PathBuf>, env::VarError>)
 
 fn parse_echo_args(args: &[String]) -> String {
     let mut result = String::new();
-    let mut i = 0;
+    let mut in_quotes = false;
+    let mut is_first = true;
 
-    while i < args.len() {
-        let arg = &args[i];
-        
-        // Handle quoted arguments
+    for arg in args {
         if arg.starts_with('\'') && arg.ends_with('\'') {
-            // Remove quotes and append content
+            // Single quoted argument
+            if !is_first && !in_quotes {
+                result.push(' ');
+            }
             result.push_str(&arg[1..arg.len()-1]);
         } else if arg.starts_with('\'') {
             // Start of quoted section
+            if !is_first && !in_quotes {
+                result.push(' ');
+            }
+            in_quotes = true;
             result.push_str(&arg[1..]);
         } else if arg.ends_with('\'') {
             // End of quoted section
+            in_quotes = false;
             result.push_str(&arg[..arg.len()-1]);
         } else {
-            // Normal argument
+            // Normal argument or middle of quoted section
+            if !is_first && !in_quotes {
+                result.push(' ');
+            }
             result.push_str(arg);
         }
-
-        // Add space only if not at end and next arg doesn't start with quote
-        if i < args.len() - 1 && !args[i + 1].starts_with('\'') {
-            result.push(' ');
-        }
-        
-        i += 1;
+        is_first = false;
     }
 
     result
