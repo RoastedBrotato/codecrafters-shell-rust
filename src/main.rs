@@ -3,23 +3,21 @@ use std::io::{self, Write};
 use std::process::{Command, exit};
 
 fn echo(args: &[&str]) {
-    let args_with_quotes: Vec<String> = args
-        .iter()
-        .map(|arg| {
-            // Check if the argument starts and ends with single quotes
-            if arg.starts_with("'") && arg.ends_with("'") && arg.len() > 1 {
-                // Remove the surrounding single quotes
-                arg[1..arg.len()-1].to_string()
-            } else {
-                // Otherwise, leave the argument as is
-                arg.to_string()
-            }
-        })
-        .collect();
+    let args_with_quotes: Vec<String> = args.iter().map(|&arg| {
+        // Check if the argument starts and ends with single quotes
+        if arg.starts_with("'") && arg.ends_with("'") && arg.len() > 1 {
+            // Strip the surrounding single quotes
+            arg[1..arg.len()-1].to_string()
+        } else {
+            // Otherwise, leave the argument as is
+            arg.to_string()
+        }
+    }).collect();
 
     // Join arguments with a space and print the result
     println!("{}", args_with_quotes.join(" "));
 }
+
 
 
 fn cat(args: &[&str]) {
