@@ -1,6 +1,6 @@
 mod builtins;
 
-use crate::builtins::{cmd_type, echo, exit, BUILD_INS};
+use crate::builtins::{cmd_type, echo, exit, pwd, BUILD_INS};
 use std::env;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -39,11 +39,12 @@ fn main() {
             match cmd {
                 "exit" => exit(args),
                 "echo" => echo(args),
-                "type" => cmd_type(cmd, args), // Updated to pass `cmd` as the first argument
+                "type" => cmd_type(cmd, args),
+                "pwd" => pwd(), // Handle the `pwd` command
                 _ => unreachable!(),
             };
         } else if let Some(path) = find_exe(cmd) {
-            Command::new(cmd)
+            Command::new(path)
                 .args(args)
                 .status()
                 .expect("failed to execute process");

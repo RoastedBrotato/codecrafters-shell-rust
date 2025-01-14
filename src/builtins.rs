@@ -1,29 +1,23 @@
-pub const BUILD_INS: [&str; 3] = ["exit", "echo", "type"];
-
-pub fn exit(_args: &[&str]) {
-    std::process::exit(0);
-}
+use std::env;
 
 pub fn echo(args: &[&str]) {
-    let output = args.join(" ");
-    println!("{}", output);
+    println!("{}", args.join(" "));
 }
 
-pub fn cmd_type(_cmd: &str, args: &[&str]) {
-    if args.len() != 1 {
-        println!("type: expected 1 argument, got {}", args.len());
-        return;
-    }
+pub fn exit(args: &[&str]) {
+    let code = args.get(0).and_then(|s| s.parse::<i32>().ok()).unwrap_or(0);
+    std::process::exit(code);
+}
 
-    let query = args[0];
-    let builtins = ["exit", "echo", "type"];
+pub fn cmd_type(_cmd: &str, _args: &[&str]) {
+    println!("type command not fully implemented");
+}
 
-    if builtins.contains(&query) {
-        println!("{} is a shell builtin", query);
-    } else if let Some(path) = super::find_exe(query) {
-        // Show the full path for the type command
-        println!("{} is {}", query, path.to_string_lossy());
-    } else {
-        println!("{}: not found", query);
+pub fn pwd() {
+    match env::current_dir() {
+        Ok(path) => println!("{}", path.display()),
+        Err(err) => eprintln!("pwd: error retrieving current directory: {}", err),
     }
 }
+
+pub const BUILD_INS: &[&str] = &["exit", "echo", "type", "pwd"];
