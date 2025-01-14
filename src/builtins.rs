@@ -11,6 +11,7 @@ pub fn exit(args: &[&str]) {
     std::process::exit(code);
 }
 
+
 pub fn cmd_type(_cmd: &str, args: &[&str]) {
     if args.is_empty() {
         eprintln!("type: missing operand");
