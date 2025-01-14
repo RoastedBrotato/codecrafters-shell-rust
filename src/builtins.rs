@@ -20,10 +20,11 @@ pub fn cd(args: &[&str]) {
     }
 
     let path = args[0];
-    if let Err(err) = env::set_current_dir(path) {
-        eprintln!("cd: {}: {}", path, err);
+    if let Err(_) = env::set_current_dir(path) {
+        eprintln!("cd: {}: No such file or directory", path);
     }
 }
+
 
 pub fn cmd_type(_cmd: &str, args: &[&str]) {
     if args.is_empty() {
