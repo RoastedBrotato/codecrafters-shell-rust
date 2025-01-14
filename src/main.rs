@@ -40,11 +40,13 @@ fn main() {
                 "exit" => exit(args),
                 "echo" => echo(args),
                 "type" => cmd_type(cmd, args),
-                "pwd" => pwd(), // Handle the `pwd` command
+                "pwd" => pwd(),
                 _ => unreachable!(),
             };
         } else if let Some(path) = find_exe(cmd) {
-            Command::new(path)
+            // Create command using just the base name, but execute with full path
+            Command::new(&path)
+                .arg0(cmd)  // This sets the program name as seen by the program
                 .args(args)
                 .status()
                 .expect("failed to execute process");
