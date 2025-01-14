@@ -18,8 +18,6 @@ fn echo(args: &[&str]) {
     println!("{}", args_with_quotes.join(" "));
 }
 
-
-
 fn cat(args: &[&str]) {
     // Handle single quotes similarly for cat command
     for arg in args {
@@ -57,7 +55,14 @@ fn main() {
         match cmd {
             "echo" => echo(args),
             "cat" => cat(args),
-            _ => println!("Command not found: {}", cmd),
+            "exit" => exit(0),
+            _ => {
+                if let Ok(mut child) = Command::new(cmd).args(args).spawn() {
+                    child.wait().unwrap();
+                } else {
+                    println!("{}: command not found", cmd);
+                }
+            }
         }
     }
 }
