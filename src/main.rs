@@ -53,8 +53,6 @@ fn main() {
                         println!("{cmd} is a shell builtin");
                     } else if let Some(cmd_absolutepath) = find_command_in_paths(cmd, &path) {
                         println!("{cmd} is {cmd_absolutepath}");
-                    } else {
-                        println!("{cmd}: not found");
                     }
                 }
                 "pwd" => {
@@ -179,10 +177,15 @@ fn resolve_relative_path(target: &str, current_dir: &Path) -> PathBuf {
     path
 }
 fn find_command_in_paths(cmd: &str, paths: &Result<Vec<PathBuf>, env::VarError>) -> Option<String> {
-    paths.as_ref().ok().and_then(|paths| {
-        paths.iter().find_map(|path| {
-            let path = path.join(cmd);
-            path.exists().then(|| cmd.to_string())
-        })
-    })
+    let Ok(paths) = paths else {
+        return None;
+    };
+    
+    for path in paths {
+        let full_path = path.join(cmd);
+        if full_path.is_file() {
+            return full_path.to_str().map(String::from);
+        }
+    }
+    None
 }
