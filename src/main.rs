@@ -5,6 +5,7 @@ use std::env;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::Command;
+use std::os::unix::process::CommandExt;
 
 pub fn find_exe(name: &str) -> Option<PathBuf> {
     if let Ok(paths) = env::var("PATH") {
