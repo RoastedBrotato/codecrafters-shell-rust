@@ -22,11 +22,15 @@ pub fn cd(args: &[&str]) {
     let path = if args[0] == "~" {
         env::var("HOME").unwrap_or_else(|_| {
             eprintln!("cd: HOME environment variable is not set");
-            return;
+            String::new() // Provide a valid String
         })
     } else {
         args[0].to_string()
     };
+
+    if path.is_empty() {
+        return; // Exit early if HOME is not set and path is empty
+    }
 
     if let Err(_) = env::set_current_dir(&path) {
         eprintln!("cd: {}: No such file or directory", path);
