@@ -43,7 +43,9 @@ fn main() {
                     }
                 }
                 "echo" => {
-                    println!("{}", commands[1..].join(" "));
+                    if commands.len() > 1 {
+                        println!("{}", parse_echo_args(&commands[1..]));
+                    }
                 }
                 "type" => {
                     let Some(cmd) = commands.get(1).map(|x| x.as_str()) else {
@@ -161,4 +163,37 @@ fn find_command_in_paths(cmd: &str, paths: &Result<Vec<PathBuf>, env::VarError>)
             path.exists().then(|| path.to_string_lossy().to_string())
         })
     })
+}
+
+fn parse_echo_args(args: &[String]) -> String {
+    let mut result = String::new();
+    let mut i = 0;
+
+    while i < args.len() {
+        let arg = &args[i];
+        
+        // Handle quoted arguments
+        if arg.starts_with('\'') && arg.ends_with('\'') {
+            // Remove quotes and append content
+            result.push_str(&arg[1..arg.len()-1]);
+        } else if arg.starts_with('\'') {
+            // Start of quoted section
+            result.push_str(&arg[1..]);
+        } else if arg.ends_with('\'') {
+            // End of quoted section
+            result.push_str(&arg[..arg.len()-1]);
+        } else {
+            // Normal argument
+            result.push_str(arg);
+        }
+
+        // Add space only if not at end and next arg doesn't start with quote
+        if i < args.len() - 1 && !args[i + 1].starts_with('\'') {
+            result.push(' ');
+        }
+        
+        i += 1;
+    }
+
+    result
 }
