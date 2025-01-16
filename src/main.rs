@@ -65,7 +65,7 @@ fn main() -> io::Result<()> {
                         .spawn()?
                         .wait()?;
                 } else {
-                    eprintln!("Command not found: {}", cmd);
+                    eprintln!("{}: command not found", cmd);
                 }
             }
             None => {}
