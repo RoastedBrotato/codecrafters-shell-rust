@@ -2,7 +2,7 @@
 mod builtins;
 
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Write};
+use std::.io::{self, BufRead, BufReader, Write};
 use std::process;
 use std::env;
 use std::path::{Path, PathBuf};
@@ -108,8 +108,8 @@ fn parse_command(input: &str) -> Vec<String> {
                 }
             }
             '\\' => {
-                if let Some(next_char) = chars.next() {
-                    if in_double_quotes {
+                if in_double_quotes {
+                    if let Some(next_char) = chars.next() {
                         match next_char {
                             '\\' | '$' | '"' | '\n' => current_token.push(next_char),
                             _ => {
@@ -117,7 +117,14 @@ fn parse_command(input: &str) -> Vec<String> {
                                 current_token.push(next_char);
                             }
                         }
-                    } else {
+                    }
+                } else if in_single_quotes {
+                    current_token.push(c);
+                    if let Some(next_char) = chars.next() {
+                        current_token.push(next_char);
+                    }
+                } else {
+                    if let Some(next_char) = chars.next() {
                         current_token.push(next_char);
                     }
                 }
