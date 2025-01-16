@@ -6,6 +6,7 @@ use std::io::{self, BufRead, BufReader, Write};
 use std::process;
 use std::env;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 // Add the find_exe function that builtins.rs needs
 pub fn find_exe(command: &str) -> Option<PathBuf> {
@@ -55,26 +56,16 @@ fn main() -> io::Result<()> {
             Some("cd") => builtins::cd(&args),
             Some("pwd") => builtins::pwd(),
             Some("type") => builtins::cmd_type(command.unwrap_or(""), &args),
-            Some("cat") => {
-                if !args.is_empty() {
-                    let mut contents = Vec::new();
-                    for file_path in args {
-                        match File::open(file_path) {
-                            Ok(file) => {
-                                let reader = BufReader::new(file);
-                                for line in reader.lines() {
-                                    if let Ok(content) = line {
-                                        contents.push(content.trim().to_string());
-                                    }
-                                }
-                            }
-                            Err(e) => eprintln!("Error opening file {}: {}", file_path, e),
-                        }
-                    }
-                    println!("{}", contents.join(""));
+            Some(cmd) => {
+                if let Some(path) = find_exe(cmd) {
+                    Command::new(path)
+                        .args(&args)
+                        .spawn()?
+                        .wait()?;
+                } else {
+                    eprintln!("Command not found: {}", cmd);
                 }
             }
-            Some(cmd) => eprintln!("Unknown command: {}", cmd),
             None => {}
         }
 
