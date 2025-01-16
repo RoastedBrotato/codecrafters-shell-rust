@@ -30,21 +30,22 @@ fn main() -> io::Result<()> {
             }
             Some("cat") => {
                 if tokens.len() > 1 {
+                    let mut contents = Vec::new();
                     for file_path in &tokens[1..] {
                         match File::open(file_path) {
                             Ok(file) => {
                                 let reader = BufReader::new(file);
                                 for line in reader.lines() {
-                                    match line {
-                                        Ok(content) => print!("{} ", content),
-                                        Err(e) => eprintln!("Error reading file: {}", e),
+                                    if let Ok(content) = line {
+                                        contents.push(content);
                                     }
                                 }
-                                println!();
                             }
                             Err(e) => eprintln!("Error opening file {}: {}", file_path, e),
                         }
                     }
+                    // Print all contents on a single line
+                    println!("{}", contents.join(" "));
                 }
             }
             Some(cmd) => eprintln!("Unknown command: {}", cmd),
