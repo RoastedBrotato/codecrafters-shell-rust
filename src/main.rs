@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::process;
+use std::env;
+use std::path::Path;
 
 fn main() -> io::Result<()> {
     let stdin = io::stdin();
@@ -28,6 +30,22 @@ fn main() -> io::Result<()> {
                     println!();
                 }
             }
+            Some("cd") => {
+                if tokens.len() > 1 {
+                    let new_dir = &tokens[1];
+                    match env::set_current_dir(Path::new(new_dir)) {
+                        Ok(_) => {},
+                        Err(e) => eprintln!("cd: {}: {}", new_dir, e),
+                    }
+                } else {
+                    // If no directory is specified, change to home directory
+                    if let Some(home_dir) = env::var_os("HOME") {
+                        if let Err(e) = env::set_current_dir(home_dir) {
+                            eprintln!("cd: {}", e);
+                        }
+                    }
+                }
+            }
             Some("cat") => {
                 if tokens.len() > 1 {
                     let mut contents = Vec::new();
@@ -44,7 +62,6 @@ fn main() -> io::Result<()> {
                             Err(e) => eprintln!("Error opening file {}: {}", file_path, e),
                         }
                     }
-                    // Print all contents without spaces between them
                     println!("{}", contents.join(""));
                 }
             }
