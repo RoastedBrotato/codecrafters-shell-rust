@@ -57,6 +57,12 @@ fn main() -> io::Result<()> {
             Some("cd") => builtins::cd(&args),
             Some("pwd") => builtins::pwd(),
             Some("type") => builtins::cmd_type(command.unwrap_or(""), &args),
+            Some("cat") => {
+                for arg in args {
+                    let content = std::fs::read_to_string(arg).unwrap_or_else(|_| format!("cat: {}: No such file or directory", arg));
+                    print!("{}", content);
+                }
+            }
             Some(cmd) => {
                 if let Some(path) = find_exe(cmd) {
                     Command::new(&path)
@@ -82,30 +88,48 @@ fn parse_command(input: &str) -> Vec<String> {
     let mut tokens = Vec::new();
     let mut current_token = String::new();
     let mut chars = input.chars().peekable();
+    let mut in_single_quotes = false;
+    let mut in_double_quotes = false;
 
     while let Some(c) = chars.next() {
         match c {
             '\'' => {
-                // Read until the closing quote
-                while let Some(c) = chars.next() {
-                    if c == '\'' {
-                        // Check if the next character is also a quote
-                        if chars.peek() == Some(&'\'') {
-                            chars.next(); // Skip the next quote
-                            continue;     // Continue reading without adding the quote
-                        } else {
-                            // End of quoted section
-                            break;
+                if in_double_quotes {
+                    current_token.push(c);
+                } else {
+                    in_single_quotes = !in_single_quotes;
+                }
+            }
+            '"' => {
+                if in_single_quotes {
+                    current_token.push(c);
+                } else {
+                    in_double_quotes = !in_double_quotes;
+                }
+            }
+            '\\' => {
+                if in_double_quotes {
+                    if let Some(next_char) = chars.next() {
+                        match next_char {
+                            '\\' | '$' | '"' | '\n' => current_token.push(next_char),
+                            _ => {
+                                current_token.push(c);
+                                current_token.push(next_char);
+                            }
                         }
-                    } else {
-                        current_token.push(c);
                     }
+                } else {
+                    current_token.push(c);
                 }
             }
             ' ' => {
-                if !current_token.is_empty() {
-                    tokens.push(current_token.clone());
-                    current_token.clear();
+                if in_single_quotes || in_double_quotes {
+                    current_token.push(c);
+                } else {
+                    if !current_token.is_empty() {
+                        tokens.push(current_token.clone());
+                        current_token.clear();
+                    }
                 }
             }
             _ => current_token.push(c),
