@@ -72,6 +72,10 @@ fn main() -> ! {
                     );
                 }
             }
+            &["pwd"] => {
+                let current_dir = env::current_dir().unwrap();
+                tprintln(current_dir.to_str().unwrap(), &mut stdout_file);
+            }
             &["echo", ..] => tprintln(&format!("{}", tokens[1..].join(" ")), &mut stdout_file),
             &["exit", code] => {
                 let exit_code = code.parse().unwrap_or(0);
@@ -88,7 +92,7 @@ fn main() -> ! {
                         .expect("failed to execute command");
                     // Directly write stdout and stderr to their respective targets
                     tprint(&String::from_utf8_lossy(&output.stdout), &mut stdout_file);
-                    tprint(&String::from_utf8_lossy(&output.stderr), &mut stderr_file);
+                    tprint(&String::from_utf8_lossy(&output.stderr), &mut stdout_file);
                 } else {
                     tprintln(
                         &format!("{}: command not found", tokens[0]),
