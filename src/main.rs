@@ -58,7 +58,8 @@ fn main() -> io::Result<()> {
             Some("type") => builtins::cmd_type(command.unwrap_or(""), &args),
             Some(cmd) => {
                 if let Some(path) = find_exe(cmd) {
-                    Command::new(path)
+                    Command::new(&path)
+                        .arg0(cmd)  // Use original command name
                         .args(&args)
                         .spawn()?
                         .wait()?;
