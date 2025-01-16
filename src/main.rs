@@ -53,12 +53,6 @@ fn main() -> ! {
                     tprintln(&format!("{}: not found", cmd), &mut stdout_file);
                 }
             }
-            &["pwd"] => {
-                tprintln(
-                    &format!("{}", env::current_dir().unwrap().display()),
-                    &mut stdout_file,
-                );
-            }
             &["cd", dir] => {
                 let mut new_dir = dir;
                 let mut new_path = PathBuf::new();
@@ -111,7 +105,7 @@ fn handle_redir<'a>(
     stderr_file: &mut Box<dyn Write>,
 ) -> Result<(), &'a str> {
     for i in 0..tokens.len() {
-        if tokens[i] == ">" || tokens[i] == "1>" || tokens[i] == "2>" {
+        if tokens[i] == ">" || tokens[i] == "1>" || tokens[i] == "2>" || tokens[i] == ">>" || tokens[i] == "1>>" {
             // Ensure the redirection file is specified
             if i + 1 < tokens.len() {
                 let redir_path = Path::new(tokens[i + 1]);
@@ -121,9 +115,12 @@ fn handle_redir<'a>(
                         return Err("Redirection file parent directory does not exist");
                     }
                 }
-                let redir_file =
-                    File::create(redir_path).map_err(|_| "Failed to create redirection file")?;
-                if tokens[i] == ">" || tokens[i] == "1>" {
+                let redir_file = if tokens[i].ends_with(">>") {
+                    File::options().append(true).create(true).open(redir_path).map_err(|_| "Failed to open redirection file")?
+                } else {
+                    File::create(redir_path).map_err(|_| "Failed to create redirection file")?
+                };
+                if tokens[i] == ">" || tokens[i] == "1>" || tokens[i] == ">>" || tokens[i] == "1>>" {
                     // Redirect stdout
                     *stdout_file = Box::new(redir_file);
                 } else if tokens[i] == "2>" {
