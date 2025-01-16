@@ -7,6 +7,7 @@ use std::process;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::os::unix::process::CommandExt; // Import CommandExt trait
 
 // Add the find_exe function that builtins.rs needs
 pub fn find_exe(command: &str) -> Option<PathBuf> {
