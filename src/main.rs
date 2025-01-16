@@ -92,7 +92,7 @@ fn main() -> ! {
                         .expect("failed to execute command");
                     // Directly write stdout and stderr to their respective targets
                     tprint(&String::from_utf8_lossy(&output.stdout), &mut stdout_file);
-                    tprint(&String::from_utf8_lossy(&output.stderr), &mut stdout_file);
+                    tprint(&String::from_utf8_lossy(&output.stderr), &mut stderr_file);
                 } else {
                     tprintln(
                         &format!("{}: command not found", tokens[0]),
@@ -109,7 +109,7 @@ fn handle_redir<'a>(
     stderr_file: &mut Box<dyn Write>,
 ) -> Result<(), &'a str> {
     for i in 0..tokens.len() {
-        if tokens[i] == ">" || tokens[i] == "1>" || tokens[i] == "2>" || tokens[i] == ">>" || tokens[i] == "1>>" {
+        if tokens[i] == ">" || tokens[i] == "1>" || tokens[i] == "2>" || tokens[i] == ">>" || tokens[i] == "1>>" || tokens[i] == "2>>" {
             // Ensure the redirection file is specified
             if i + 1 < tokens.len() {
                 let redir_path = Path::new(tokens[i + 1]);
@@ -127,7 +127,7 @@ fn handle_redir<'a>(
                 if tokens[i] == ">" || tokens[i] == "1>" || tokens[i] == ">>" || tokens[i] == "1>>" {
                     // Redirect stdout
                     *stdout_file = Box::new(redir_file);
-                } else if tokens[i] == "2>" {
+                } else if tokens[i] == "2>" || tokens[i] == "2>>" {
                     // Redirect stderr
                     *stderr_file = Box::new(redir_file);
                 }
