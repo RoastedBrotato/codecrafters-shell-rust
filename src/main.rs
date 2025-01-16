@@ -1,194 +1,100 @@
-use core::str;
-#[allow(unused_imports)]
-use std::io::{self, Write};
-use std::{
-    env,
-    path::{self, Path, PathBuf},
-    process::{exit, Command},
-    str::FromStr,
-    sync::LazyLock,
-};
-static BUILTIN: LazyLock<Vec<&str>> = LazyLock::new(|| {
-    #[rustfmt::skip]
-    let mut v = vec![
-        "cd",
-        "echo",
-        "exit",
-        "pwd",
-        "type",
-    ];
-    v.sort_unstable();
-    v
-});
-fn main() {
-    print!("$ ");
-    io::stdout().flush().unwrap();
-    // Wait for user input
+use std::fs::File;
+use std::io::{self, BufRead, BufReader, Write};
+use std::process;
+
+fn main() -> io::Result<()> {
     let stdin = io::stdin();
-    let mut input = String::new();
-    let path = env::var("PATH").map(|x| env::split_paths(&x).collect::<Vec<_>>());
-    let Ok(mut current_dir) = env::current_dir() else {
-        println!("current directory does not exist");
-        exit(-1);
-    };
-    while stdin.read_line(&mut input).is_ok() {
-        let commands: Vec<String> = parse_input(&input).expect("command parse error");
-        if let Some(command) = commands.first() {
-            match command.as_str() {
-                "exit" => {
-                    if commands.get(1).map_or(false, |x| (*x == "0")) {
-                        break;
-                    } else {
-                        todo!()
-                    }
-                }
-                "echo" => {
-                    if commands.len() > 1 {
-                        println!("{}", parse_echo_args(&commands[1..]));
-                    }
-                }
-                "type" => {
-                    let Some(cmd) = commands.get(1).map(|x| x.as_str()) else {
-                        continue;
-                    };
-                    if BUILTIN.binary_search(&cmd).is_ok() {
-                        println!("{cmd} is a shell builtin");
-                    } else if let Some(cmd_absolutepath) = find_command_in_paths(cmd, &path) {
-                        println!("{cmd} is {cmd_absolutepath}");
-                    } else {
-                        println!("{cmd}: not found");
-                    }
-                }
-                "pwd" => {
-                    let Ok(path) = path::absolute(&current_dir) else {
-                        println!("error: pwd is empty");
-                        continue;
-                    };
-                    println!("{}", path.to_str().unwrap());
-                }
-                "cd" => {
-                    let Some(target) = commands.get(1) else {
-                        println!("USAGE: cd TARGET");
-                        continue;
-                    };
-                    let target = resolve_relative_path(target, &current_dir);
-                    if target.exists() {
-                        current_dir = target;
-                    } else {
-                        println!(
-                            "cd: {}: No such file or directory",
-                            target.to_string_lossy()
-                        );
-                    }
-                }
-                _ => {
-                    let Some(command) = commands.first() else {
-                        continue;
-                    };
-                    if let Some(command) = find_command_in_paths(command, &path) {
-                        let out = Command::new(command)
-                            .current_dir(&current_dir)
-                            .args(&commands[1..])
-                            .output()
-                            .expect("failed to execute process");
-                        io::stdout().write_all(&out.stdout).unwrap();
-                    } else {
-                        println!("{}: command not found", input.trim());
-                    }
-                }
-            }
-        }
-        print!("$ ");
-        io::stdout().flush().unwrap();
-        input.clear();
-    }
-}
-fn parse_input(input: &String) -> Option<Vec<String>> {
-    let input = input.trim();
-    let (cmd, rest) = input.split_once(" ").unwrap_or((input, ""));
-    let mut result = vec![cmd.to_string()];
-    let mut rest = rest.trim();
-    while !rest.is_empty() {
-        match rest.chars().next().unwrap() {
-            '\'' => {
-                let (arg, r) = rest[1..].split_once('\'')?;
-                result.push(arg.to_string());
-                rest = r;
-            }
-            ' ' => {
-                rest = rest.trim_start();
-            }
-            _c => {
-                let (arg, r) = rest.split_once(' ').unwrap_or((rest, ""));
-                result.push(arg.to_string());
-                rest = r;
-            }
-        }
-    }
-    Some(result)
-    // input
-    //     .split_ascii_whitespace()
-    //     .map(|x| x.to_string())
-    //     .collect::<Vec<_>>()
-}
-fn resolve_relative_path(target: &str, current_dir: &Path) -> PathBuf {
-    let mut path: PathBuf = PathBuf::new();
-    if !target.starts_with('/') {
-        path = current_dir.to_path_buf();
-    } else {
-        path.push("/");
-    }
-    for dir in target.split('/') {
-        match dir {
-            ".." => {
-                path.pop();
-            }
-            "." => {}
-            "~" => {
-                let dir = env::var("HOME").unwrap();
-                path = PathBuf::from_str(&dir).unwrap();
-            }
-            dir if !dir.is_empty() => {
-                path.push(dir);
-            }
-            _ => (),
-        }
-    }
-    path
-}
-fn find_command_in_paths(cmd: &str, paths: &Result<Vec<PathBuf>, env::VarError>) -> Option<String> {
-    paths.as_ref().ok().and_then(|paths| {
-        paths.iter().find_map(|path| {
-            let path = path.join(cmd);
-            path.exists().then(|| path.to_string_lossy().to_string())
-        })
-    })
-}
+    let mut stdout = io::stdout();
+    
+    print!("$ ");
+    stdout.flush()?;
 
-fn parse_echo_args(args: &[String]) -> String {
-    let mut result = String::new();
-    let mut prev_was_quoted = false;
+    for line in stdin.lock().lines() {
+        let input = line?;
+        if input.is_empty() {
+            print!("$ ");
+            stdout.flush()?;
+            continue;
+        }
 
-    for (i, arg) in args.iter().enumerate() {
-        let is_quoted = arg.starts_with('\'') && arg.ends_with('\'');
+        // Parse the command and arguments while respecting quotes
+        let tokens = parse_command(&input);
         
-        // Add space only if:
-        // - Not the first argument
-        // - Previous arg wasn't quoted OR current arg isn't quoted
-        if i > 0 && !(prev_was_quoted && is_quoted) {
-            result.push(' ');
+        match tokens.get(0).map(|s| s.as_str()) {
+            Some("exit") => break,
+            Some("echo") => {
+                // Join all arguments after "echo" with a single space
+                if tokens.len() > 1 {
+                    println!("{}", tokens[1..].join(" "));
+                } else {
+                    println!();
+                }
+            }
+            Some("cat") => {
+                if tokens.len() > 1 {
+                    for file_path in &tokens[1..] {
+                        match File::open(file_path) {
+                            Ok(file) => {
+                                let reader = BufReader::new(file);
+                                for line in reader.lines() {
+                                    match line {
+                                        Ok(content) => print!("{} ", content),
+                                        Err(e) => eprintln!("Error reading file: {}", e),
+                                    }
+                                }
+                                println!();
+                            }
+                            Err(e) => eprintln!("Error opening file {}: {}", file_path, e),
+                        }
+                    }
+                }
+            }
+            Some(cmd) => eprintln!("Unknown command: {}", cmd),
+            None => {}
         }
 
-        if is_quoted {
-            // Handle fully quoted argument
-            result.push_str(&arg[1..arg.len()-1]);
-        } else {
-            // Handle unquoted argument
-            result.push_str(arg);
-        }
-
-        prev_was_quoted = is_quoted;
+        print!("$ ");
+        stdout.flush()?;
     }
 
-    result
+    Ok(())
+}
+
+fn parse_command(input: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut current_token = String::new();
+    let mut in_quotes = false;
+    let mut chars = input.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        match c {
+            '\'' if !in_quotes => {
+                in_quotes = true;
+            }
+            '\'' if in_quotes => {
+                in_quotes = false;
+                if !current_token.is_empty() {
+                    tokens.push(current_token.clone());
+                    current_token.clear();
+                }
+            }
+            ' ' if !in_quotes => {
+                if !current_token.is_empty() {
+                    tokens.push(current_token.clone());
+                    current_token.clear();
+                }
+            }
+            _ => {
+                current_token.push(c);
+            }
+        }
+    }
+
+    // Add the last token if there is one
+    if !current_token.is_empty() {
+        tokens.push(current_token);
+    }
+
+    // Filter out empty tokens
+    tokens.into_iter().filter(|s| !s.is_empty()).collect()
 }
