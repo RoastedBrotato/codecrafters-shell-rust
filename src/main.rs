@@ -1,3 +1,5 @@
+mod builtins;
+
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::process;
@@ -20,36 +22,19 @@ fn main() -> io::Result<()> {
         }
 
         let tokens = parse_command(&input);
+        let command = tokens.get(0).map(String::as_str);
+        let args: Vec<&str> = tokens.iter().skip(1).map(String::as_str).collect();
         
-        match tokens.get(0).map(|s| s.as_str()) {
-            Some("exit") => break,
-            Some("echo") => {
-                if tokens.len() > 1 {
-                    println!("{}", tokens[1..].join(" "));
-                } else {
-                    println!();
-                }
-            }
-            Some("cd") => {
-                if tokens.len() > 1 {
-                    let new_dir = &tokens[1];
-                    match env::set_current_dir(Path::new(new_dir)) {
-                        Ok(_) => {},
-                        Err(e) => eprintln!("cd: {}: {}", new_dir, e),
-                    }
-                } else {
-                    // If no directory is specified, change to home directory
-                    if let Some(home_dir) = env::var_os("HOME") {
-                        if let Err(e) = env::set_current_dir(home_dir) {
-                            eprintln!("cd: {}", e);
-                        }
-                    }
-                }
-            }
+        match command {
+            Some("exit") => builtins::exit(&args),
+            Some("echo") => builtins::echo(&args),
+            Some("cd") => builtins::cd(&args),
+            Some("pwd") => builtins::pwd(),
+            Some("type") => builtins::cmd_type(command.unwrap_or(""), &args),
             Some("cat") => {
-                if tokens.len() > 1 {
+                if !args.is_empty() {
                     let mut contents = Vec::new();
-                    for file_path in &tokens[1..] {
+                    for file_path in args {
                         match File::open(file_path) {
                             Ok(file) => {
                                 let reader = BufReader::new(file);
