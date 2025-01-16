@@ -109,7 +109,17 @@ fn parse_command(input: &str) -> Vec<String> {
             }
             '\\' => {
                 if let Some(next_char) = chars.next() {
-                    current_token.push(next_char);
+                    if in_double_quotes {
+                        match next_char {
+                            '\\' | '$' | '"' | '\n' => current_token.push(next_char),
+                            _ => {
+                                current_token.push(c);
+                                current_token.push(next_char);
+                            }
+                        }
+                    } else {
+                        current_token.push(next_char);
+                    }
                 }
             }
             ' ' => {
