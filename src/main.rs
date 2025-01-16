@@ -2,7 +2,7 @@
 mod builtins;
 
 use std::fs::File;
-use std::.io::{self, BufRead, BufReader, Write};
+use std::io::{self, BufRead, BufReader, Write};
 use std::process;
 use std::env;
 use std::path::{Path, PathBuf};
