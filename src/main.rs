@@ -37,15 +37,15 @@ fn main() -> io::Result<()> {
                                 let reader = BufReader::new(file);
                                 for line in reader.lines() {
                                     if let Ok(content) = line {
-                                        contents.push(content);
+                                        contents.push(content.trim().to_string());
                                     }
                                 }
                             }
                             Err(e) => eprintln!("Error opening file {}: {}", file_path, e),
                         }
                     }
-                    // Print all contents on a single line
-                    println!("{}", contents.join(" "));
+                    // Print all contents without spaces between them
+                    println!("{}", contents.join(""));
                 }
             }
             Some(cmd) => eprintln!("Unknown command: {}", cmd),
