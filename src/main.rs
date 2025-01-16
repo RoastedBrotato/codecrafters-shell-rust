@@ -72,7 +72,7 @@ fn parse_command(input: &str) -> Vec<String> {
                         // Check if the next character is also a quote
                         if chars.peek() == Some(&'\'') {
                             chars.next(); // Skip the next quote
-                            current_token.push('\'');
+                            continue;     // Continue reading without adding the quote
                         } else {
                             // End of quoted section
                             break;
